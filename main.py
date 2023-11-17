@@ -1,7 +1,9 @@
 import asyncio
+import logging
 
 from aiogram import Bot
 from telethon import TelegramClient, events
+from telethon.events import NewMessage
 
 from config import settings
 from controllers import contains_keyword, join_group
@@ -26,11 +28,12 @@ async def main():
     keywords = await get_keywords()
 
     @client.on(events.NewMessage())
-    async def keyword_seek(event):
+    async def keyword_seek(event: NewMessage.Event):
         if event.chat_id not in groups:
             return
         finded, keyword = contains_keyword(event.text, keywords)
         if finded:
+            logging.info(event.sender)
             chat_title = event.chat.title
             fullname = event.message.sender.first_name + ' ' + event.message.sender.last_name \
                 if event.message.sender.last_name else event.message.sender.first_name
