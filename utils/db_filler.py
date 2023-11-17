@@ -18,7 +18,7 @@ async def commit_group_to_db(client, group_name: str):
 async def main():
     client = TelegramClient('test_client_session', settings.API_ID, settings.API_HASH.get_secret_value())
     await client.start()
-    await commit_group_to_db(client, 'Vmeste_Tbilisi')
+    await commit_group_to_db(client, 'test_group_with_ban')
 
 
 if __name__ == '__main__':

@@ -39,9 +39,10 @@ async def main():
             chat_name = groups[event.chat_id]
             event_id = event.message.id
             if event.message.sender.username:
-                text = text_with_username.format(chat_title, keyword, fullname, sender_name, event_text, chat_name, event_id)
+                text = text_with_username.format(chat_title, keyword, fullname, event.message.sender.username,
+                                                 event_text, chat_name, event_id)
             else:
-                text = text_without_username.format(chat_title, keyword, sender_name, event_text, chat_name, event_id)
+                text = text_without_username.format(chat_title, keyword, fullname, event_text, chat_name, event_id)
             await bot.send_message(chat_id=settings.GROUP_ID, text=text)
 
     await client.run_until_disconnected()
