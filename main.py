@@ -8,6 +8,7 @@ from core.config import settings
 from core.database.crud import get_active_groups_dict, get_keywords
 from core.database.db import db
 from core.resources.controllers import contains_keyword, join_group, prepare_text_when_match
+from core.resources.errors_handlers import router as error_router
 from core.resources.handlers import router as base_router
 from core.resources.middlewares import SessionMiddleware, UpdatesDumperMiddleware
 from core.resources.notify_admin import on_shutdown_notify, on_startup_notify
@@ -26,6 +27,7 @@ async def main():
     dispatcher.startup.register(on_startup_notify)
     dispatcher.shutdown.register(on_shutdown_notify)
     dispatcher.include_router(base_router)
+    dispatcher.include_router(error_router)
     await client.start()
 
     async with db.session_factory() as session:
