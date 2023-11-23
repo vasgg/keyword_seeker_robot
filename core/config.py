@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     BOT_TOKEN: SecretStr
     ADMIN_ID: int
     GROUP_ID: int
-    db_url: str = "sqlite+aiosqlite:///database/database.db"
-    db_echo: bool = False
+    db_url: str = "sqlite+aiosqlite:///core/database/database.db"
+    db_echo: bool = True
 
     class Config:
         env_file = '.env'
@@ -23,12 +23,9 @@ settings = Settings()
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s: "
-    "%(filename)s: "
-    "%(levelname)s: "
-    "%(funcName)s(): "
-    "%(lineno)d:\t"
-    "%(message)s",
+           "%(filename)s: "
+           "%(levelname)s: "
+           "%(funcName)s(): "
+           "%(lineno)d:\t"
+           "%(message)s",
 )
-
-
-
