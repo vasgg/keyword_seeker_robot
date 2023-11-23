@@ -14,7 +14,7 @@ from core.resources.notify_admin import on_shutdown_notify, on_startup_notify
 
 
 async def main():
-    client = TelegramClient('new_session', settings.API_ID, settings.API_HASH.get_secret_value())
+    client = TelegramClient('test_client_session', settings.API_ID, settings.API_HASH.get_secret_value())
     bot = Bot(token=settings.BOT_TOKEN.get_secret_value(), parse_mode='HTML')
     storage = MemoryStorage()
     dispatcher = Dispatcher(storage=storage, client=client)
