@@ -11,9 +11,11 @@ from core.resources.controllers import contains_keyword, join_group, prepare_tex
 from core.resources.handlers import router as base_router
 from core.resources.middlewares import SessionMiddleware, UpdatesDumperMiddleware
 from core.resources.notify_admin import on_shutdown_notify, on_startup_notify
+from core.utils.create_tables import create_db
 
 
 async def main():
+    await create_db()
     client = TelegramClient('test_client_session', settings.API_ID, settings.API_HASH.get_secret_value())
     bot = Bot(token=settings.BOT_TOKEN.get_secret_value(), parse_mode='HTML')
     storage = MemoryStorage()
