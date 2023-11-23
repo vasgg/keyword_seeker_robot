@@ -1,11 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import func
-from sqlalchemy.orm import (
-    DeclarativeBase,
-    Mapped,
-    mapped_column,
-)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
@@ -23,6 +19,7 @@ class Group(Base):
     group_id: Mapped[int] = mapped_column(unique=True)
     group_name: Mapped[str]
     group_title: Mapped[str]
+    is_active: Mapped[bool] = mapped_column(default=True)
 
     def __str__(self):
         return f"{self.__class__.__name__}(id={self.id}, group_name={self.group_name!r})"
@@ -30,4 +27,4 @@ class Group(Base):
 
 class Word(Base):
     __tablename__ = "words"
-    keyword: Mapped[str]
+    keyword: Mapped[str] = mapped_column(unique=True)
