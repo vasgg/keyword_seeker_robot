@@ -38,9 +38,9 @@ async def main():
             subscribed_groups.append(dialog.id)
 
         active_groups = await get_active_groups_dict(session=session)
-        for group in active_groups:
-            if group not in subscribed_groups:
-                await join_group(client, active_groups[group].group_id)
+        for group_id in active_groups:
+            if group_id not in subscribed_groups:
+                await join_group(client, group_id)
 
     @client.on(events.NewMessage())
     async def keyword_seek(event):
