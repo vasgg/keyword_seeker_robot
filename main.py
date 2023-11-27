@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -11,6 +12,7 @@ from core.resources.controllers import contains_keyword, join_group, prepare_tex
 from core.resources.errors_handlers import router as error_router
 from core.resources.handlers import router as base_router
 from core.resources.middlewares import SessionMiddleware, UpdatesDumperMiddleware
+from core.resources.minus_words import MINUS_WORDS
 from core.resources.notify_admin import on_shutdown_notify, on_startup_notify
 from core.utils.create_tables import create_db
 
@@ -47,10 +49,17 @@ async def main():
             keywords = await get_keywords(session=internal_session)
         if event.chat_id not in groups:
             return
-        finded, keyword = contains_keyword(event.text, keywords)
-        if finded:
-            text = await prepare_text_when_match(event=event, groups=groups, keyword=keyword)
-            await bot.send_message(chat_id=settings.GROUP_ID, text=text, disable_web_page_preview=True)
+        found, keyword = contains_keyword(event.text, keywords)
+        if not found:
+            return
+
+        found_minus, minus_word = contains_keyword(event.text, MINUS_WORDS)
+        if found_minus:
+            logging.info(f"Filtered out by minus-word: {minus_word}")
+            return
+
+        text = await prepare_text_when_match(event=event, groups=groups, keyword=keyword)
+        await bot.send_message(chat_id=settings.GROUP_ID, text=text, disable_web_page_preview=True)
 
     await dispatcher.start_polling(bot)
 
