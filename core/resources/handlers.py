@@ -170,9 +170,9 @@ async def add_group_handler(
         await message.answer(text=f"Такой группы не существует.")
         return
     new_group = Group(
-        group_id=int("-100" + str(group.id)),
-        group_name=group_username,
-        group_title=group.title,
+        telegram_id=int("-100" + str(group.id)),
+        link=group_username,
+        title=group.title,
     )
     try:
         session.add(new_group)
