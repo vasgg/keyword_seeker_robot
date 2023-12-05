@@ -50,15 +50,15 @@ async def prepare_text_when_match(event, groups: dict[int, Group], keyword: str)
         else event.message.sender.first_name
     )
     event_text = event.text
-    chat_name = groups[event.chat_id].group_name
+    chat_name = groups[event.chat_id].link
     event_id = event.message.id
     sender = await event.get_sender()
-    if sender.username:
+    if sender.link:
         text = text_with_username.format(
             chat_title,
             keyword,
             fullname,
-            event.message.sender.username,
+            event.message.sender.link,
             event_text,
             chat_name,
             event_id,
@@ -70,19 +70,19 @@ async def prepare_text_when_match(event, groups: dict[int, Group], keyword: str)
     return text
 
 
-async def get_active_groups_list(active_groups: dict[int, Group]) -> str:
+def get_active_groups_list(active_groups: dict[int, Group]) -> str:
     text: str = ""
     for i, group in enumerate(active_groups, start=1):
         created_at = arrow.get(active_groups[group].created_at)
         text += groups_list.format(
-            i, active_groups[group].group_title, created_at.humanize(locale="ru")
+            i, active_groups[group].title, created_at.humanize(locale="ru")
         )
     if len(text) == 0:
         text = no_groups_yet
     return text
 
 
-async def get_keywords_list(keywords: dict[int, Word]) -> str:
+def format_keywords(keywords: dict[int, Word]) -> str:
     text: str = ""
     for i, keyword in enumerate(keywords, start=1):
         created_at = arrow.get(keywords[keyword].created_at)

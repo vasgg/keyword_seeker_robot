@@ -16,15 +16,17 @@ class Base(DeclarativeBase):
 
 class Group(Base):
     __tablename__ = "groups"
-    group_id: Mapped[int] = mapped_column(unique=True)
-    group_name: Mapped[str]
-    group_title: Mapped[str]
+
+    telegram_id: Mapped[int] = mapped_column(unique=True)
+    link: Mapped[str]
+    title: Mapped[str]
     is_active: Mapped[bool] = mapped_column(default=True)
 
     def __str__(self):
-        return f"{self.__class__.__name__}(id={self.id}, group_name={self.group_name!r})"
+        return f"{self.__class__.__name__}(id={self.id}, group_name={self.link!r})"
 
 
 class Word(Base):
     __tablename__ = "words"
     keyword: Mapped[str] = mapped_column(unique=True)
+    minus_word: Mapped[bool] = mapped_column(default=False)

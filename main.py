@@ -9,10 +9,10 @@ from core.config import settings
 from core.database.crud import get_active_groups_dict, get_keywords
 from core.database.db import db
 from core.resources.controllers import contains_keyword, join_group, prepare_text_when_match
+from core.resources.enums import EntityType
 from core.resources.errors_handlers import router as error_router
 from core.resources.handlers import router as base_router
 from core.resources.middlewares import SessionMiddleware, UpdatesDumperMiddleware
-from core.resources.minus_words import MINUS_WORDS
 from core.resources.notify_admin import on_shutdown_notify, on_startup_notify
 from core.utils.create_tables import create_db
 
@@ -45,15 +45,16 @@ async def main():
     @client.on(events.NewMessage())
     async def keyword_seek(event):
         async with db.session_factory() as internal_session:
-            groups = await get_active_groups_dict(session=internal_session)
-            keywords = await get_keywords(session=internal_session)
+            groups = await get_active_groups_dict(internal_session)
+            keywords = await get_keywords(internal_session, EntityType.WORD)
+            minus_words = await get_keywords(internal_session, EntityType.MINUS_WORD)
         if event.chat_id not in groups:
             return
         found, keyword = contains_keyword(event.text, keywords)
         if not found:
             return
 
-        found_minus, minus_word = contains_keyword(event.text, MINUS_WORDS)
+        found_minus, minus_word = contains_keyword(event.text, minus_words)
         if found_minus:
             logging.info(f"Filtered out by minus-word: {minus_word}")
             return

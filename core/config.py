@@ -11,11 +11,11 @@ class Settings(BaseSettings):
     ADMIN_ID: int
     GROUP_ID: int
     db_url: str = "sqlite+aiosqlite:///core/database/database.db"
-    db_echo: bool = True
+    db_echo: bool = False
 
     class Config:
-        env_file = '.env'
-        env_file_encoding = 'utf-8'
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
 settings = Settings()
@@ -23,9 +23,9 @@ settings = Settings()
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s: "
-           "%(filename)s: "
-           "%(levelname)s: "
-           "%(funcName)s(): "
-           "%(lineno)d:\t"
-           "%(message)s",
+    "%(filename)s: "
+    "%(levelname)s: "
+    "%(funcName)s(): "
+    "%(lineno)d:\t"
+    "%(message)s",
 )
