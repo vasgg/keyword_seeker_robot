@@ -29,4 +29,4 @@ class Group(Base):
 class Word(Base):
     __tablename__ = "words"
     keyword: Mapped[str] = mapped_column(unique=True)
-    minus_word: Mapped[bool] = mapped_column(default=False)
+    minus_word: Mapped[bool] = mapped_column(default=False, server_default="0")
