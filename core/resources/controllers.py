@@ -53,12 +53,12 @@ async def prepare_text_when_match(event, groups: dict[int, Group], keyword: str)
     chat_name = groups[event.chat_id].link
     event_id = event.message.id
     sender = await event.get_sender()
-    if sender.link:
+    if sender.username:
         text = text_with_username.format(
             chat_title,
             keyword,
             fullname,
-            event.message.sender.link,
+            sender.username,
             event_text,
             chat_name,
             event_id,
