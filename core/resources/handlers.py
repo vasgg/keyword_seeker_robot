@@ -8,6 +8,8 @@ from aiogram.fsm.state import State
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from telethon import TelegramClient
+from telethon.tl.functions.messages import CheckChatInviteRequest
+from telethon.tl.types import ChatInviteAlready, ChatInvitePeek, ChatInvite
 
 from core.database.crud import (
     delete_keyword,
@@ -16,14 +18,13 @@ from core.database.crud import (
     get_keywords_dict,
     toggle_group_activeness,
 )
-from core.database.db import db
 from core.database.models import Group, Word
 from core.resources.callback_data import ActionDataFactory
 from core.resources.controllers import (
     get_active_groups_list,
     format_keywords,
     get_telegram_entity,
-    join_group,
+    join_group, join_group_by_invite_link,
 )
 from core.resources.enums import EntityType, Action
 from core.resources.keyboards import (
@@ -61,7 +62,7 @@ async def start_handler(message: types.Message) -> None:
 
 @router.message(F.text == StartKeyboardText.GROUPS)
 async def manage_groups(
-    message: types.Message, session: AsyncSession, state: FSMContext
+        message: types.Message, session: AsyncSession, state: FSMContext
 ) -> None:
     active_groups = await get_active_groups_dict(session=session)
     msg = await message.answer(
@@ -75,7 +76,7 @@ async def manage_groups(
     F.text.in_([StartKeyboardText.SEARCH_WORDS, StartKeyboardText.MINUS_WORDS])
 )
 async def manage_words(
-    message: types.Message, session: AsyncSession, state: FSMContext
+        message: types.Message, session: AsyncSession, state: FSMContext
 ) -> None:
     entity = (
         EntityType.MINUS_WORD
@@ -93,7 +94,7 @@ async def manage_words(
 
 @router.callback_query(ActionDataFactory.filter(F.action == Action.ADD))
 async def add_callback_processing(
-    callback: types.CallbackQuery, state: FSMContext, callback_data: ActionDataFactory
+        callback: types.CallbackQuery, state: FSMContext, callback_data: ActionDataFactory
 ) -> None:
     msg = await callback.message.answer(text=ADD_TEXT_REPLY[callback_data.entity])
     await state.update_data(enter_text_id=msg.message_id)
@@ -103,9 +104,9 @@ async def add_callback_processing(
 
 @router.callback_query(ActionDataFactory.filter(F.action == Action.DELETE_PRE))
 async def delete_callback_processing(
-    callback: types.CallbackQuery,
-    session: AsyncSession,
-    callback_data: ActionDataFactory,
+        callback: types.CallbackQuery,
+        session: AsyncSession,
+        callback_data: ActionDataFactory,
 ) -> None:
     match callback_data.entity:
         case EntityType.GROUP:
@@ -125,9 +126,9 @@ async def delete_callback_processing(
 
 @router.callback_query(ActionDataFactory.filter(F.action == Action.BACK))
 async def back_callback_processing(
-    callback: types.CallbackQuery,
-    session: AsyncSession,
-    callback_data: ActionDataFactory,
+        callback: types.CallbackQuery,
+        session: AsyncSession,
+        callback_data: ActionDataFactory,
 ) -> None:
     match callback_data.entity:
         case EntityType.GROUP:
@@ -151,10 +152,10 @@ async def back_callback_processing(
 
 @router.message(States.add_group)
 async def add_group_handler(
-    message: types.Message,
-    state: FSMContext,
-    client: TelegramClient,
-    session: AsyncSession,
+        message: types.Message,
+        state: FSMContext,
+        client: TelegramClient,
+        session: AsyncSession,
 ) -> None:
     data = await state.get_data()
     await message.delete()
@@ -164,66 +165,86 @@ async def add_group_handler(
         )
     except TelegramBadRequest:
         pass
-    group_username = message.text
-    group = await get_telegram_entity(entity=group_username, client=client)
+    user_input = message.text
+    if '+' in user_input:
+        link_hash = user_input.split('/')[-1][1:]
+        check = await client(CheckChatInviteRequest(link_hash))
+        match check:
+            case ChatInviteAlready():
+                await toggle_group_activeness(int("-100" + str(check.chat.id)), session=session)
+                return
+            case ChatInvitePeek() | ChatInvite():
+                logging.info(f"ChatInvite case: {check}")
+                await join_group_by_invite_link(client=client, chat_hash=link_hash)
+                return
+            case _:
+                assert False, 'something went wrong'
+
+    group = await get_telegram_entity(entity=user_input, client=client)
     if not group:
         await message.answer(text=f"Такой группы не существует.")
         return
-    new_group = Group(
-        telegram_id=int("-100" + str(group.id)),
-        link=group_username,
-        title=group.title,
-    )
-    try:
+    group_exist_in_db = await get_group(group_id=int("-100" + str(group.id)), session=session)
+    if not group_exist_in_db:
+        new_group = Group(
+            telegram_id=int("-100" + str(group.id)),
+            link=user_input,
+            title=group.title,
+        )
         session.add(new_group)
         await session.flush()
         await state.set_state()
-    except IntegrityError as e:
-        async with db.session_factory() as session:
-            group = await get_group(group_id=new_group.telegram_id, session=session)
-            if not group.is_active:
-                await toggle_group_activeness(group.telegram_id, session=session)
-                groups = await get_active_groups_dict(session=session)
-                msg = await message.bot.edit_message_text(
-                    message_id=data["msg_id"],
-                    chat_id=message.chat.id,
-                    text="📮 Список групп: \n\n" + get_active_groups_list(groups),
-                    reply_markup=get_main_keyboard(
-                        mode=EntityType.GROUP, entities=groups
-                    ),
-                )
-                await state.update_data(msg_id=msg.message_id)
-                return
-            else:
-                await message.answer(text=f"Такая группа уже есть в базе данных.")
-                logging.error(e)
-                return
-    await join_group(client=client, channel_entity=new_group.telegram_id)
-    active_groups = await get_active_groups_dict(session=session)
-    try:
-        msg = await message.bot.edit_message_text(
-            message_id=data["msg_id"],
-            chat_id=message.chat.id,
-            text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
-            reply_markup=get_main_keyboard(
-                mode=EntityType.GROUP, entities=active_groups
-            ),
-        )
-        await state.update_data(msg_id=msg.message_id)
-    except KeyError:
-        msg = await message.answer(
-            text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
-            reply_markup=get_main_keyboard(
-                mode=EntityType.GROUP, entities=active_groups
-            ),
-        )
-        await state.update_data(msg_id=msg.message_id)
+        await join_group(client=client, channel_entity=new_group.telegram_id)
+        active_groups = await get_active_groups_dict(session=session)
+        try:
+            msg = await message.bot.edit_message_text(
+                message_id=data["msg_id"],
+                chat_id=message.chat.id,
+                text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                reply_markup=get_main_keyboard(
+                    mode=EntityType.GROUP, entities=active_groups
+                ),
+            )
+            await state.update_data(msg_id=msg.message_id)
+        except KeyError:
+            msg = await message.answer(
+                text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                reply_markup=get_main_keyboard(
+                    mode=EntityType.GROUP, entities=active_groups
+                ),
+            )
+            await state.update_data(msg_id=msg.message_id)
+    else:
+        await toggle_group_activeness(group_exist_in_db.telegram_id, session=session)
+        active_groups = await get_active_groups_dict(session=session)
+        try:
+            msg = await message.bot.edit_message_text(
+                message_id=data["msg_id"],
+                chat_id=message.chat.id,
+                text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                reply_markup=get_main_keyboard(
+                    mode=EntityType.GROUP, entities=active_groups
+                ),
+            )
+            await state.update_data(msg_id=msg.message_id)
+        except TelegramBadRequest:
+            pass
+
+        except KeyError:
+            msg = await message.answer(
+                text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                reply_markup=get_main_keyboard(
+                    mode=EntityType.GROUP, entities=active_groups
+                ),
+            )
+            await state.update_data(msg_id=msg.message_id)
+        return
 
 
 @router.message(States.add_keyword)
 @router.message(States.add_minus_word)
 async def add_keyword_handler(
-    message: types.Message, state: FSMContext, session: AsyncSession
+        message: types.Message, state: FSMContext, session: AsyncSession
 ) -> None:
     fsm_state = await state.get_state()
     entity = EntityType.WORD
@@ -271,14 +292,14 @@ async def add_keyword_handler(
 
 @router.callback_query(ActionDataFactory.filter(F.action == Action.DELETE))
 async def remove_callback_processing(
-    callback: types.CallbackQuery,
-    session: AsyncSession,
-    state: FSMContext,
-    callback_data: ActionDataFactory,
+        callback: types.CallbackQuery,
+        session: AsyncSession,
+        state: FSMContext,
+        callback_data: ActionDataFactory,
 ) -> None:
     data = await state.get_data()
     match callback_data.entity:
-        case EntityType.GROUP.value:
+        case EntityType.GROUP:
             await toggle_group_activeness(telegram_id=callback_data.id, session=session)
             entities = await get_active_groups_dict(session=session)
             text = "📮 Список групп: \n\n" + get_active_groups_list(entities)

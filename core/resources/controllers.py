@@ -4,6 +4,7 @@ from typing import Sequence
 import arrow
 from telethon import TelegramClient
 from telethon.tl.functions.channels import JoinChannelRequest
+from telethon.tl.functions.messages import ImportChatInviteRequest
 from telethon.tl.types import Channel, Chat, User
 
 from core.database.models import Group, Word
@@ -33,6 +34,14 @@ async def join_group(client, channel_entity):
         logging.info(f"Successfully joined {channel_entity}")
     except Exception as e:
         logging.info(f"Error joining {channel_entity}: {e}")
+
+
+async def join_group_by_invite_link(client, chat_hash: str):
+    try:
+        await client(ImportChatInviteRequest(chat_hash))
+        logging.info(f"Successfully joined group via link https://t.me/{chat_hash}")
+    except Exception as e:
+        logging.info(f"Error joining group via link https://t.me/{chat_hash}: {e}")
 
 
 def contains_keyword(text: str, words: Sequence[str]) -> tuple[bool, str | None]:
