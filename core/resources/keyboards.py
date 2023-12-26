@@ -52,7 +52,7 @@ def get_delete_groups_buttons(groups: dict) -> InlineKeyboardMarkup:
             action=Action.DELETE, entity=EntityType.GROUP, id=group.telegram_id
         )
         button = [
-            InlineKeyboardButton(text=f"❌ {group.link}", callback_data=data.pack())
+            InlineKeyboardButton(text=f"❌ {group.title[:32]}", callback_data=data.pack())
         ]
         buttons.append(button)
     back_data = ActionDataFactory(action=Action.BACK, entity=EntityType.GROUP)

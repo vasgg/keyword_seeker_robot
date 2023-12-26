@@ -25,7 +25,7 @@ WORD_LIST_REPLY = {
 }
 
 ADD_TEXT_REPLY = {
-    EntityType.GROUP: "Введите юзернейм группы",
+    EntityType.GROUP: "Отправте ссылку на группу, юзернейм группы или инвайт ссылку.",
     EntityType.WORD: "Введите ключевое слово",
     EntityType.MINUS_WORD: "Введите минус-слово",
 }
