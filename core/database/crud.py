@@ -51,15 +51,3 @@ async def toggle_group_activeness(telegram_id: int, session: AsyncSession) -> No
         .values(is_active=func.not_(Group.is_active))
     )
     await session.flush()
-
-
-async def turn_on_group_activeness(group_id: int, session: AsyncSession) -> None:
-    await session.execute(
-        update(Group).filter(Group.telegram_id == group_id).values(is_active=1)
-    )
-
-
-async def turn_off_group_activeness(group_id: int, session: AsyncSession) -> None:
-    await session.execute(
-        update(Group).filter(Group.telegram_id == group_id).values(is_active=0)
-    )

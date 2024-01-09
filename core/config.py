@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     BOT_TOKEN: SecretStr
     ADMIN_ID: int
     GROUP_ID: int
-    db_url: str = "sqlite+aiosqlite:///core/database/database.db"
+    db_url: str = "sqlite+aiosqlite:///database.db"
     db_echo: bool = False
 
     class Config:
