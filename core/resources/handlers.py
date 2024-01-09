@@ -24,7 +24,7 @@ from core.resources.controllers import (
     get_active_groups_list,
     format_keywords,
     get_telegram_entity,
-    join_group, join_group_by_invite_link,
+    join_group, join_group_via_link,
 )
 from core.resources.enums import EntityType, Action
 from core.resources.keyboards import (
@@ -166,79 +166,145 @@ async def add_group_handler(
     except TelegramBadRequest:
         pass
     user_input = message.text
-    if '+' in user_input:
+
+    if 't.me/+' in user_input:
         link_hash = user_input.split('/')[-1][1:]
         check = await client(CheckChatInviteRequest(link_hash))
         match check:
             case ChatInviteAlready():
-                await toggle_group_activeness(int("-100" + str(check.chat.id)), session=session)
-                return
+                logging.info(f"You are already member of group {user_input}. toggling activness...")
+                await toggle_group_activeness(check.chat.id, session=session)
+                active_groups = await get_active_groups_dict(session=session)
+                try:
+                    msg = await message.bot.edit_message_text(
+                        message_id=data["msg_id"],
+                        chat_id=message.chat.id,
+                        text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                        reply_markup=get_main_keyboard(
+                            mode=EntityType.GROUP, entities=active_groups
+                        ),
+                    )
+                    await state.update_data(msg_id=msg.message_id)
+                except TelegramBadRequest:
+                    msg = await message.answer(
+                        text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                        reply_markup=get_main_keyboard(
+                            mode=EntityType.GROUP, entities=active_groups
+                        ),
+                    )
+                    await state.update_data(msg_id=msg.message_id)
+                    return
+                except KeyError:
+                    msg = await message.answer(
+                        text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                        reply_markup=get_main_keyboard(
+                            mode=EntityType.GROUP, entities=active_groups
+                        ),
+                    )
+                    await state.update_data(msg_id=msg.message_id)
+                    return
             case ChatInvitePeek() | ChatInvite():
-                logging.info(f"ChatInvite case: {check}")
-                await join_group_by_invite_link(client=client, chat_hash=link_hash)
-                return
+                # logging.info(f"ChatInvite case: {check}")
+                await join_group_via_link(client=client, chat_hash=link_hash)
+                group = await get_telegram_entity(entity=user_input, client=client)
+                group_exist_in_db = await get_group(group_id=group.id, session=session)
+                if not group_exist_in_db:
+                    new_group = Group(
+                        telegram_id=group.id * -1,
+                        link=f'https://t.me/c/{group.id}',
+                        # link=user_input,
+                        title=group.title,
+                    )
+                    session.add(new_group)
+                    await session.flush()
+                    await state.set_state()
+                    active_groups = await get_active_groups_dict(session=session)
+                    try:
+                        msg = await message.bot.edit_message_text(
+                            message_id=data["msg_id"],
+                            chat_id=message.chat.id,
+                            text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                            reply_markup=get_main_keyboard(
+                                mode=EntityType.GROUP, entities=active_groups
+                            ),
+                        )
+                        await state.update_data(msg_id=msg.message_id)
+                    except KeyError:
+                        msg = await message.answer(
+                            text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                            reply_markup=get_main_keyboard(
+                                mode=EntityType.GROUP, entities=active_groups
+                            ),
+                        )
+                        await state.update_data(msg_id=msg.message_id)
+                        return
             case _:
                 assert False, 'something went wrong'
-
-    group = await get_telegram_entity(entity=user_input, client=client)
-    if not group:
-        await message.answer(text=f"Такой группы не существует.")
-        return
-    group_exist_in_db = await get_group(group_id=int("-100" + str(group.id)), session=session)
-    if not group_exist_in_db:
-        new_group = Group(
-            telegram_id=int("-100" + str(group.id)),
-            link=user_input,
-            title=group.title,
-        )
-        session.add(new_group)
-        await session.flush()
-        await state.set_state()
-        await join_group(client=client, channel_entity=new_group.telegram_id)
-        active_groups = await get_active_groups_dict(session=session)
-        try:
-            msg = await message.bot.edit_message_text(
-                message_id=data["msg_id"],
-                chat_id=message.chat.id,
-                text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
-                reply_markup=get_main_keyboard(
-                    mode=EntityType.GROUP, entities=active_groups
-                ),
-            )
-            await state.update_data(msg_id=msg.message_id)
-        except KeyError:
-            msg = await message.answer(
-                text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
-                reply_markup=get_main_keyboard(
-                    mode=EntityType.GROUP, entities=active_groups
-                ),
-            )
-            await state.update_data(msg_id=msg.message_id)
     else:
-        await toggle_group_activeness(group_exist_in_db.telegram_id, session=session)
-        active_groups = await get_active_groups_dict(session=session)
-        try:
-            msg = await message.bot.edit_message_text(
-                message_id=data["msg_id"],
-                chat_id=message.chat.id,
-                text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
-                reply_markup=get_main_keyboard(
-                    mode=EntityType.GROUP, entities=active_groups
-                ),
-            )
-            await state.update_data(msg_id=msg.message_id)
-        except TelegramBadRequest:
-            pass
+        group = await get_telegram_entity(entity=user_input, client=client)
 
-        except KeyError:
-            msg = await message.answer(
-                text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
-                reply_markup=get_main_keyboard(
-                    mode=EntityType.GROUP, entities=active_groups
-                ),
+        if not group:
+            await message.answer(text=f"Такой группы не существует.")
+            return
+        group_exist_in_db = await get_group(group_id=group.id, session=session)
+        if not group_exist_in_db:
+            if user_input.startswith('t.me/'):
+                user_input = user_input.replace('t.me/', 'https://t.me/')
+            if not user_input.startswith('https://t.me/'):
+                user_input = 'https://t.me/' + user_input
+            new_group = Group(
+                telegram_id=int('-100' + str(group.id)),
+                link=user_input,
+                title=group.title,
             )
-            await state.update_data(msg_id=msg.message_id)
-        return
+            session.add(new_group)
+            await session.flush()
+            await state.set_state()
+            await join_group(client=client, channel_entity=new_group.telegram_id)
+            active_groups = await get_active_groups_dict(session=session)
+            try:
+                msg = await message.bot.edit_message_text(
+                    message_id=data["msg_id"],
+                    chat_id=message.chat.id,
+                    text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                    reply_markup=get_main_keyboard(
+                        mode=EntityType.GROUP, entities=active_groups
+                    ),
+                )
+                await state.update_data(msg_id=msg.message_id)
+            except KeyError:
+                msg = await message.answer(
+                    text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                    reply_markup=get_main_keyboard(
+                        mode=EntityType.GROUP, entities=active_groups
+                    ),
+                )
+                await state.update_data(msg_id=msg.message_id)
+        else:
+            await toggle_group_activeness(group_exist_in_db.telegram_id, session=session)
+            active_groups = await get_active_groups_dict(session=session)
+            try:
+                msg = await message.bot.edit_message_text(
+                    message_id=data["msg_id"],
+                    chat_id=message.chat.id,
+                    text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                    reply_markup=get_main_keyboard(
+                        mode=EntityType.GROUP, entities=active_groups
+                    ),
+                )
+                await state.update_data(msg_id=msg.message_id)
+            except TelegramBadRequest:
+                pass
+
+            except KeyError:
+                msg = await message.answer(
+                    text="📮 Список групп: \n\n" + get_active_groups_list(active_groups),
+                    reply_markup=get_main_keyboard(
+                        mode=EntityType.GROUP, entities=active_groups
+                    ),
+                )
+                await state.update_data(msg_id=msg.message_id)
+            return
 
 
 @router.message(States.add_keyword)

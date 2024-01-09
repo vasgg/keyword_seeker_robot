@@ -44,6 +44,8 @@ async def main():
 
     @client.on(events.NewMessage())
     async def keyword_seek(event):
+        if event.sender_id == settings.ADMIN_ID:
+            logging.info(f'new message: {event.text} in group {event.chat_id}')
         async with db.session_factory() as internal_session:
             groups = await get_active_groups_dict(internal_session)
             keywords = await get_keywords(internal_session, EntityType.WORD)
@@ -52,13 +54,13 @@ async def main():
             return
         found, keyword = contains_keyword(event.text, keywords)
         if not found:
+            # logging.info(f"didn't find any matches: {event.text} in group {event.chat_id}")
             return
 
         found_minus, minus_word = contains_keyword(event.text, minus_words)
         if found_minus:
             logging.info(f"Filtered out by minus-word: {minus_word}")
             return
-
         text = await prepare_text_when_match(event=event, groups=groups, keyword=keyword)
         await bot.send_message(chat_id=settings.GROUP_ID, text=text, disable_web_page_preview=True)
 

@@ -36,12 +36,12 @@ async def join_group(client, channel_entity):
         logging.info(f"Error joining {channel_entity}: {e}")
 
 
-async def join_group_by_invite_link(client, chat_hash: str):
+async def join_group_via_link(client, chat_hash: str):
     try:
         await client(ImportChatInviteRequest(chat_hash))
-        logging.info(f"Successfully joined group via link https://t.me/{chat_hash}")
+        logging.info(f"Successfully joined group via link https://t.me/+{chat_hash}")
     except Exception as e:
-        logging.info(f"Error joining group via link https://t.me/{chat_hash}: {e}")
+        logging.info(f"Error joining group via link https://t.me/+{chat_hash}: {e}")
 
 
 def contains_keyword(text: str, words: Sequence[str]) -> tuple[bool, str | None]:
@@ -52,16 +52,12 @@ def contains_keyword(text: str, words: Sequence[str]) -> tuple[bool, str | None]
 
 
 async def prepare_text_when_match(event, groups: dict[int, Group], keyword: str) -> str:
-    chat_title = event.chat.title
-    fullname = (
-        event.message.sender.first_name + " " + event.message.sender.last_name
-        if event.message.sender.last_name
-        else event.message.sender.first_name
-    )
+    chat_title = groups[event.chat_id].title
+    sender = await event.get_sender()
     event_text = event.text
     chat_name = groups[event.chat_id].link
     event_id = event.message.id
-    sender = await event.get_sender()
+    fullname = sender.first_name + " " + sender.last_name if sender.last_name else sender.first_name
     if sender.username:
         text = text_with_username.format(
             chat_title,
