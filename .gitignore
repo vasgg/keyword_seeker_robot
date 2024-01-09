@@ -28,3 +28,4 @@ venv.bak/
 *.so
 *.db
 *.session
+*.session-journal
