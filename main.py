@@ -8,13 +8,14 @@ from telethon import TelegramClient, events
 from core.config import settings
 from core.database.crud import get_active_groups_dict, get_keywords
 from core.database.db import db
-from core.resources.controllers import contains_keyword, join_group, prepare_text_when_match
-from core.resources.enums import EntityType
+from core.resources.controllers import text_matches, join_group, prepare_text_when_match
+from core.resources.enums import EntityType, IgnoreReason
 from core.resources.errors_handlers import router as error_router
 from core.resources.handlers import router as base_router
 from core.resources.middlewares import SessionMiddleware, UpdatesDumperMiddleware
 from core.resources.notify_admin import on_shutdown_notify, on_startup_notify
 from core.utils.create_tables import create_db
+from core.utils.result import Err, Ok
 
 
 async def main():
@@ -52,17 +53,19 @@ async def main():
             minus_words = await get_keywords(internal_session, EntityType.MINUS_WORD)
         if event.chat_id not in groups:
             return
-        found, keyword = contains_keyword(event.text, keywords)
-        if not found:
-            # logging.info(f"didn't find any matches: {event.text} in group {event.chat_id}")
-            return
-
-        found_minus, minus_word = contains_keyword(event.text, minus_words)
-        if found_minus:
-            logging.info(f"Filtered out by minus-word: {minus_word}")
-            return
-        text = await prepare_text_when_match(event=event, groups=groups, keyword=keyword)
-        await bot.send_message(chat_id=settings.GROUP_ID, text=text, disable_web_page_preview=True)
+        match text_matches(event.text, keywords, minus_words):
+            case Err(IgnoreReason.NO_MATCH):
+                logging.debug(f"didn't find any matches: {event.text} in group {event.chat_id}")
+                return
+            case Err(IgnoreReason.MINUS_WORD_MATCH):
+                logging.info("Filtered out by minus-word")
+                return
+            case Err(IgnoreReason.SPAM_EVADING_MATCH):
+                logging.info("Spam detected")
+                return
+            case Ok(keyword):
+                text = await prepare_text_when_match(event=event, groups=groups, keyword=keyword)
+                await bot.send_message(chat_id=settings.GROUP_ID, text=text, disable_web_page_preview=True)
 
     await dispatcher.start_polling(bot)
 

@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 
 
 class EntityType(Enum):
@@ -12,3 +12,9 @@ class Action(Enum):
     DELETE_PRE = "delete_pre"
     DELETE = "delete"
     BACK = "back"
+
+
+class IgnoreReason(Enum):
+    NO_MATCH = auto()
+    MINUS_WORD_MATCH = auto()
+    SPAM_EVADING_MATCH = auto()
