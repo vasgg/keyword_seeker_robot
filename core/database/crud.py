@@ -20,7 +20,7 @@ async def get_active_groups_dict(session: AsyncSession) -> dict[int, Group]:
     return active_groups
 
 
-async def get_keywords(session: AsyncSession, entity: EntityType) -> Sequence[Row | RowMapping | Any]:
+async def get_keywords(session: AsyncSession, entity: EntityType) -> Sequence[str]:
     minus = entity is EntityType.MINUS_WORD
     result = await session.execute(
         select(Word.keyword).where(Word.minus_word.is_(minus))
