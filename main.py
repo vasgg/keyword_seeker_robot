@@ -21,6 +21,7 @@ from core.utils.result import Err, Ok
 async def main():
     await create_db()
     client = TelegramClient('test_client_session', settings.API_ID, settings.API_HASH.get_secret_value())
+    client.parse_mode = 'HTML'
     bot = Bot(token=settings.BOT_TOKEN.get_secret_value(), parse_mode='HTML')
     storage = MemoryStorage()
     dispatcher = Dispatcher(storage=storage, client=client)
