@@ -21,6 +21,11 @@ class TestKeywordMatching(TestCase):
         seq_3 = ["abacaba"]
         self.assertEqual(contains_keyword(self.text, seq_3), seq_3[0])
 
+        seq_4 = ["|wo"]
+        self.assertIsNone(contains_keyword(self.text, seq_4))
+
+        self.assertEqual(contains_keyword('one wo thre', seq_4), 'wo')
+
     def test_text_matches(self):
         self.assertEqual(text_matches(self.text, ["bac"], ["qwertyu"]), Ok("bac"))
         self.assertEqual(text_matches(self.text, ["bac"], ["caba"]), Err(IgnoreReason.MINUS_WORD_MATCH))

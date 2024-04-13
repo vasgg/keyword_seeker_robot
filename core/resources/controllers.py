@@ -1,4 +1,5 @@
 import logging
+import re
 import unicodedata
 from typing import Sequence
 
@@ -47,9 +48,19 @@ async def join_group_via_link(client, chat_hash: str):
         logging.info(f"Error joining group via link https://t.me/+{chat_hash}: {e}")
 
 
+def regex_matches(target_word: str, text: str) -> bool:
+    pattern = f"\\b{target_word}.*"
+    match = re.findall(pattern, text)
+    return bool(match)
+
+
 def contains_keyword(text: str, words: Sequence[str]) -> str | None:
+    lower_text = text.lower()
     for word in words:
-        if word.lower() in text.lower():
+        assert len(word) > 0
+        if word[0] == '|' and regex_matches(word[1:], lower_text):
+            return word[1:]
+        if word.lower() in lower_text:
             return word
     return None
 

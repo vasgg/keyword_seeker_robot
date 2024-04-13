@@ -1,6 +1,6 @@
-from typing import Any, Sequence
+from typing import Sequence
 
-from sqlalchemy import Row, RowMapping, delete, func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import Group, Word

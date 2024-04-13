@@ -7,8 +7,6 @@ from aiogram.types import Message
 from aiogram.types import TelegramObject, Update
 from sqlalchemy.exc import PendingRollbackError
 
-from core.database.db import db
-
 
 class SessionMiddleware(BaseMiddleware):
     async def __call__(
@@ -17,6 +15,7 @@ class SessionMiddleware(BaseMiddleware):
         event: Message,
         data: Dict[str, Any],
     ) -> Any:
+        db = data['db']
         async with db.session_factory.begin() as session:
             data["session"] = session
             res = await handler(event, data)
