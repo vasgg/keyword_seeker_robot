@@ -8,7 +8,7 @@ from telethon import TelegramClient, events
 from core.config import settings
 from core.database.crud import get_active_groups_dict, get_keywords
 from core.database.database_connector import DatabaseConnector
-from core.resources.controllers import text_matches, join_group, prepare_text_when_match
+from core.resources.controllers import join_group, prepare_text_when_match, text_matches
 from core.resources.enums import EntityType, IgnoreReason
 from core.resources.errors_handlers import router as error_router
 from core.resources.handlers import router as base_router
@@ -57,7 +57,13 @@ async def sync_missing_groups(db_connector, client):
 async def main():
     db_connector = DatabaseConnector(url=settings.db_url, echo=settings.db_echo)
     await create_db(db_connector)
-    client = TelegramClient('test_client_session', settings.API_ID, settings.API_HASH.get_secret_value())
+    client = TelegramClient('test_client_session',
+                            settings.API_ID,
+                            settings.API_HASH.get_secret_value(),
+                            request_retries=5000,
+                            retry_delay=10,
+                            connection_retries=5000,
+                            )
     client.parse_mode = 'HTML'
     bot = Bot(token=settings.BOT_TOKEN.get_secret_value(), parse_mode='HTML')
     storage = MemoryStorage()
