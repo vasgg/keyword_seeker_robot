@@ -29,3 +29,5 @@ ADD_TEXT_REPLY = {
     EntityType.WORD: "Введите ключевое слово",
     EntityType.MINUS_WORD: "Введите минус-слово",
 }
+
+GROUPS_LIST_REPLY = "📮 Список групп: \n\n"

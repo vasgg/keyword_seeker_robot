@@ -1,12 +1,12 @@
+import html
 import logging
 import re
 import unicodedata
-from typing import Sequence
+from collections.abc import Sequence
 
 import arrow
-from telethon import TelegramClient
+from telethon import TelegramClient, utils
 from telethon.tl.functions.channels import JoinChannelRequest
-from telethon.tl.functions.messages import ImportChatInviteRequest
 from telethon.tl.types import Channel, Chat, User
 
 from core.database.models import Group, Word
@@ -19,7 +19,7 @@ from core.resources.replies import (
     text_with_username,
     text_without_username,
 )
-from core.utils.result import Result, Ok, Err
+from core.utils.result import Err, Ok, Result
 
 
 async def get_telegram_entity(
@@ -40,14 +40,6 @@ async def join_group(client, channel_entity):
         logging.info(f"Error joining {channel_entity}: {e}")
 
 
-async def join_group_via_link(client, chat_hash: str):
-    try:
-        await client(ImportChatInviteRequest(chat_hash))
-        logging.info(f"Successfully joined group via link https://t.me/+{chat_hash}")
-    except Exception as e:
-        logging.info(f"Error joining group via link https://t.me/+{chat_hash}: {e}")
-
-
 def regex_matches(target_word: str, text: str) -> bool:
     pattern = f"\\b{target_word}.*"
     match = re.findall(pattern, text)
@@ -58,9 +50,10 @@ def contains_keyword(text: str, words: Sequence[str]) -> str | None:
     lower_text = text.lower()
     for word in words:
         assert len(word) > 0
-        if word[0] == '|' and regex_matches(word[1:], lower_text):
-            return word[1:]
-        if word.lower() in lower_text:
+        if word[0] == "|":
+            if regex_matches(re.escape(word[1:].lower()), lower_text):
+                return word[1:]
+        elif word.lower() in lower_text:
             return word
     return None
 
@@ -73,7 +66,7 @@ def get_alphabet(char: str):
 def detect_spam_evading(text: str) -> bool:
     in_word = False
     alphabet = None
-    for i, c in enumerate(text):
+    for c in text:
         if not c.isalpha():
             in_word = False
             continue
@@ -105,28 +98,24 @@ def text_matches(text: str, keywords: Sequence[str], minus_words: Sequence[str])
     return Ok(keyword)
 
 
+MAX_FORWARDED_TEXT_LENGTH = 3500
+
+
 async def prepare_text_when_match(event, groups: dict[int, Group], keyword: str) -> str:
-    chat_title = groups[event.chat_id].title
+    group = groups[event.chat_id]
     sender = await event.get_sender()
-    event_text = event.text
-    chat_name = groups[event.chat_id].link
-    event_id = event.message.id
-    fullname = sender.first_name + " " + sender.last_name if sender.last_name else sender.first_name
-    if sender.username:
-        text = text_with_username.format(
-            chat_title,
-            keyword,
-            fullname,
-            sender.username,
-            event_text,
-            chat_name,
-            event_id,
-        )
-    else:
-        text = text_without_username.format(
-            chat_title, keyword, fullname, event_text, chat_name, event_id
-        )
-    return text
+    event_text = event.text or ""
+    if len(event_text) > MAX_FORWARDED_TEXT_LENGTH:
+        event_text = event_text[:MAX_FORWARDED_TEXT_LENGTH] + "…"
+    fullname = utils.get_display_name(sender) if sender else "—"
+    username = getattr(sender, "username", None)
+    args = [group.title, keyword, fullname]
+    if username:
+        args.append(username)
+    args.append(event_text)
+    escaped = [html.escape(str(arg)) for arg in args]
+    template = text_with_username if username else text_without_username
+    return template.format(*escaped, html.escape(group.link), event.message.id)
 
 
 def get_active_groups_list(active_groups: dict[int, Group]) -> str:
@@ -151,3 +140,10 @@ def format_keywords(keywords: dict[int, Word]) -> str:
     if len(text) == 0:
         text = no_keywords_yet
     return text
+
+
+def get_group_link(entity: Channel | Chat) -> str:
+    username = getattr(entity, "username", None)
+    if username:
+        return f"https://t.me/{username}"
+    return f"https://t.me/c/{entity.id}"
