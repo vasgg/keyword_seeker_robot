@@ -1,4 +1,6 @@
 import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -19,6 +21,9 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
+LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s: "
@@ -27,4 +32,10 @@ logging.basicConfig(
     "%(funcName)s(): "
     "%(lineno)d:\t"
     "%(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        RotatingFileHandler(
+            LOG_DIR / "bot.log", maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
+        ),
+    ],
 )

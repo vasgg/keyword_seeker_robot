@@ -40,6 +40,15 @@ Detach with `ctrl+b q`, reattach with `herdr`. The bot keeps running while detac
 but herdr does not restart processes after a server reboot: run `./run.sh` again
 after a reboot.
 
+## Logs
+
+Logs go to the terminal and to `logs/bot.log` (rotated at 10 MB, 5 old files kept):
+
+```sh
+tail -f logs/bot.log
+grep -A 20 ERROR logs/bot.log
+```
+
 ## Development
 
 ```sh
