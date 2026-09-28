@@ -1,0 +1,31 @@
+[project]
+name = "keyword-seeker-robot"
+version = "1.0.0"
+description = "Telegram userbot that forwards group messages matching keywords"
+requires-python = ">=3.13"
+dependencies = [
+    "aiogram>=3.31,<4",
+    "aiosqlite>=0.22",
+    "arrow>=1.4",
+    "pydantic>=2.13",
+    "pydantic-settings>=2.15",
+    "sqlalchemy[asyncio]>=2.1",
+    "telethon>=1.45,<2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.13",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "UP040", "UP046"]

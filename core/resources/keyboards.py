@@ -6,7 +6,7 @@ from aiogram.types import (
 )
 
 from core.resources.callback_data import ActionDataFactory
-from core.resources.enums import EntityType, Action
+from core.resources.enums import Action, EntityType
 
 
 class StartKeyboardText:
@@ -47,7 +47,7 @@ def get_delete_keywords_buttons(word_type: EntityType, keywords: dict) -> Inline
 
 def get_delete_groups_buttons(groups: dict) -> InlineKeyboardMarkup:
     buttons = []
-    for group_id, group in groups.items():
+    for group in groups.values():
         data = ActionDataFactory(
             action=Action.DELETE, entity=EntityType.GROUP, id=group.telegram_id
         )

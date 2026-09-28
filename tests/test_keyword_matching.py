@@ -1,10 +1,9 @@
+from typing import assert_never  # python < 3.11
 from unittest import TestCase
 
-from core.resources.controllers import contains_keyword, text_matches, detect_spam_evading
+from core.resources.controllers import contains_keyword, detect_spam_evading, text_matches
 from core.resources.enums import IgnoreReason
-from core.utils.result import Ok, Err
-
-from typing_extensions import assert_never  # python < 3.11
+from core.utils.result import Err, Ok
 
 
 class TestKeywordMatching(TestCase):
@@ -47,3 +46,9 @@ class TestKeywordMatching(TestCase):
         self.assertFalse(detect_spam_evading("АБВ"))
         self.assertFalse(detect_spam_evading("АБВ abc"))
         self.assertFalse(detect_spam_evading(""))
+
+    def test_prefix_keyword_is_case_insensitive_and_escaped(self):
+        self.assertEqual(contains_keyword("продаю автомобиль", ["|Авто"]), "Авто")
+        self.assertIsNone(contains_keyword("полуавтомат", ["|авто"]))
+        self.assertEqual(contains_keyword("язык c++ нужен", ["|c++"]), "c++")
+        self.assertIsNone(contains_keyword("abc", ["|a.c"]))

@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,5 +49,12 @@ async def toggle_group_activeness(telegram_id: int, session: AsyncSession) -> No
         update(Group)
         .filter(Group.telegram_id == telegram_id)
         .values(is_active=func.not_(Group.is_active))
+    )
+    await session.flush()
+
+
+async def activate_group(telegram_id: int, session: AsyncSession) -> None:
+    await session.execute(
+        update(Group).filter(Group.telegram_id == telegram_id).values(is_active=True)
     )
     await session.flush()

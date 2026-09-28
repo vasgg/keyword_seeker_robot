@@ -1,19 +1,19 @@
 import logging
-from typing import Any, Awaitable, Callable, Dict
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.dispatcher.event.bases import UNHANDLED
-from aiogram.types import Message
-from aiogram.types import TelegramObject, Update
+from aiogram.types import Message, TelegramObject, Update
 from sqlalchemy.exc import PendingRollbackError
 
 
 class SessionMiddleware(BaseMiddleware):
     async def __call__(
         self,
-        handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
+        handler: Callable[[Message, dict[str, Any]], Awaitable[Any]],
         event: Message,
-        data: Dict[str, Any],
+        data: dict[str, Any],
     ) -> Any:
         db = data['db']
         async with db.session_factory.begin() as session:
@@ -29,9 +29,9 @@ class SessionMiddleware(BaseMiddleware):
 class UpdatesDumperMiddleware(BaseMiddleware):
     async def __call__(
         self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
         event: Update,
-        data: Dict[str, Any],
+        data: dict[str, Any],
     ) -> Any:
         json_event = event.model_dump_json(exclude_unset=True)
 

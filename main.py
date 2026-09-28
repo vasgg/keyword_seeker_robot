@@ -2,6 +2,8 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from telethon import TelegramClient, events
 
@@ -19,8 +21,6 @@ from core.utils.result import Err, Ok
 
 
 async def keyword_seek(event, bot: Bot, db: DatabaseConnector):
-    if event.sender_id == settings.ADMIN_ID:
-        logging.info(f'new message: {event.text} in group {event.chat_id}')
     async with db.session_factory() as internal_session:
         groups = await get_active_groups_dict(internal_session)
         keywords = await get_keywords(internal_session, EntityType.WORD)
@@ -39,7 +39,7 @@ async def keyword_seek(event, bot: Bot, db: DatabaseConnector):
             return
         case Ok(keyword):
             text = await prepare_text_when_match(event=event, groups=groups, keyword=keyword)
-            await bot.send_message(chat_id=settings.GROUP_ID, text=text, disable_web_page_preview=True)
+            await bot.send_message(chat_id=settings.GROUP_ID, text=text)
 
 
 async def sync_missing_groups(db_connector, client):
@@ -57,15 +57,21 @@ async def sync_missing_groups(db_connector, client):
 async def main():
     db_connector = DatabaseConnector(url=settings.db_url, echo=settings.db_echo)
     await create_db(db_connector)
-    client = TelegramClient('test_client_session',
-                            settings.API_ID,
-                            settings.API_HASH.get_secret_value(),
-                            request_retries=5000,
-                            retry_delay=10,
-                            connection_retries=5000,
-                            )
-    client.parse_mode = 'HTML'
-    bot = Bot(token=settings.BOT_TOKEN.get_secret_value(), parse_mode='HTML')
+    client = TelegramClient(
+        settings.SESSION_NAME,
+        settings.API_ID,
+        settings.API_HASH.get_secret_value(),
+        request_retries=5000,
+        retry_delay=10,
+        connection_retries=5000,
+    )
+    bot = Bot(
+        token=settings.BOT_TOKEN.get_secret_value(),
+        default=DefaultBotProperties(
+            parse_mode=ParseMode.HTML,
+            link_preview_is_disabled=True,
+        ),
+    )
     storage = MemoryStorage()
     dispatcher = Dispatcher(storage=storage, client=client, db=db_connector)
     dispatcher.message.middleware(SessionMiddleware())

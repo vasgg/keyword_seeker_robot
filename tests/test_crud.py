@@ -1,6 +1,6 @@
 from unittest import IsolatedAsyncioTestCase
 
-from core.database.crud import toggle_group_activeness, get_group, get_keywords_dict
+from core.database.crud import get_group, get_keywords_dict, toggle_group_activeness
 from core.database.database_connector import DatabaseConnector
 from core.database.models import Base, Group, Word
 from core.resources.enums import EntityType
@@ -8,7 +8,7 @@ from core.resources.enums import EntityType
 
 class Test(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        self.test_database = DatabaseConnector(url=f'sqlite+aiosqlite://', echo=True)
+        self.test_database = DatabaseConnector(url='sqlite+aiosqlite://', echo=True)
 
         async with self.test_database.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all, checkfirst=True)

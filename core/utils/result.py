@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar, Union, TypeAlias, Any
+from typing import Any, Generic, TypeAlias, TypeVar
 
 T = TypeVar("T", covariant=True)  # Success type
 E = TypeVar("E", covariant=True)  # Error type
@@ -16,7 +16,7 @@ class Err(Generic[E]):
         self.value = value
 
     def __repr__(self) -> str:
-        return "Err({})".format(repr(self.value))
+        return f"Err({repr(self.value)})"
 
     def __eq__(self, other: Any) -> bool:
         return isinstance(other, Err) and self.value == other.value
@@ -34,10 +34,10 @@ class Ok(Generic[T]):
         self.value = value
 
     def __repr__(self) -> str:
-        return "Ok({})".format(repr(self.value))
+        return f"Ok({repr(self.value)})"
 
     def __eq__(self, other: Any) -> bool:
         return isinstance(other, Ok) and self.value == other.value
 
 
-Result: TypeAlias = Union[Ok[T], Err[E]]
+Result: TypeAlias = Ok[T] | Err[E]

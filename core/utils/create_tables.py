@@ -1,8 +1,8 @@
 import asyncio
 
+from core.config import settings
 from core.database.database_connector import DatabaseConnector
 from core.database.models import Base
-from core.config import settings
 
 
 async def create_db(db):
